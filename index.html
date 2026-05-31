@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Simulador Forense 3D</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <aside class="panel">
+        <div class="panel-header">
+          <h1>Simulador Forense 3D</h1>
+          <p>Reconstruccion basica de accidentes viales</p>
+        </div>
+
+        <div class="panel-section">
+          <label for="scenario">Escenario</label>
+          <select id="scenario">
+            <option value="perpendicular">Choque perpendicular</option>
+            <option value="frontal">Frontal</option>
+            <option value="muro">Muro</option>
+            <option value="atropello">Atropello</option>
+          </select>
+        </div>
+
+        <div class="panel-section">
+          <label for="friction">Friccion (mu)</label>
+          <select id="friction">
+            <option value="0.75">Asfalto seco (0.75)</option>
+            <option value="0.45">Asfalto mojado (0.45)</option>
+          </select>
+        </div>
+
+        <div class="panel-section">
+          <label for="slopeDeg">Inclinacion de calle (grados)</label>
+          <input
+            id="slopeDeg"
+            type="number"
+            min="-15"
+            max="15"
+            step="0.5"
+            value="0"
+          />
+        </div>
+
+        <div class="panel-section">
+          <label for="restitution">Coeficiente de restitucion (e)</label>
+          <input
+            id="restitution"
+            type="number"
+            min="0"
+            max="1"
+            step="0.05"
+            value="0"
+          />
+        </div>
+
+        <div class="panel-grid">
+          <div class="panel-field">
+            <label for="massA">Masa Vehiculo A (kg)</label>
+            <input id="massA" type="number" min="100" step="10" value="1300" />
+          </div>
+          <div class="panel-field">
+            <label for="speedA">Velocidad A (km/h)</label>
+            <input id="speedA" type="number" min="0" step="1" value="0" />
+          </div>
+          <div class="panel-field">
+            <label for="skidA">Huella frenado A (m)</label>
+            <input id="skidA" type="number" min="0" step="0.5" value="18" />
+          </div>
+          <div class="panel-field">
+            <label for="distanceA">Distancia inicial A (m)</label>
+            <input id="distanceA" type="number" min="0" step="1" value="14" />
+          </div>
+          <div class="panel-field">
+            <label for="massB">Masa Vehiculo B (kg)</label>
+            <input id="massB" type="number" min="50" step="10" value="1100" />
+          </div>
+          <div class="panel-field">
+            <label for="speedB">Velocidad B (km/h)</label>
+            <input id="speedB" type="number" min="0" step="1" value="50" />
+          </div>
+          <div class="panel-field">
+            <label for="distanceB">Distancia inicial B (m)</label>
+            <input id="distanceB" type="number" min="0" step="1" value="10" />
+          </div>
+        </div>
+
+        <label class="checkbox">
+          <input id="noBrake" type="checkbox" />
+          <span>No freno (velocidad constante)</span>
+        </label>
+
+        <div class="panel-section">
+          <label for="speedFactor">Velocidad simulacion (x)</label>
+          <div class="range-row">
+            <input
+              id="speedFactor"
+              type="range"
+              min="0.25"
+              max="3"
+              step="0.25"
+              value="1"
+            />
+            <span id="speedValue" class="range-value">1.00x</span>
+          </div>
+        </div>
+
+        <div class="panel-actions">
+          <button id="processBtn" class="primary">PROCESAR VECTORES 3D</button>
+          <button id="resetBtn">RESETEAR ESCENA</button>
+          <button id="pauseBtn">PAUSAR SIMULACION</button>
+          <button id="exportBtn" class="ghost">EXPORTAR DICTAMEN</button>
+        </div>
+
+        <div class="panel-foot">
+          <div class="legend">
+            <span class="dot blue"></span>
+            <span>Vector A</span>
+            <span class="dot red"></span>
+            <span>Vector B</span>
+            <span class="dot white"></span>
+            <span>Vector resultante</span>
+          </div>
+        </div>
+      </aside>
+
+      <main class="viewport">
+        <canvas id="scene"></canvas>
+        <div class="hud">
+          <div class="hud-title">HUD Forense</div>
+          <div class="hud-grid">
+            <div class="hud-item">
+              <span>Vel A (km/h)</span>
+              <strong id="hudVelA">0.00</strong>
+            </div>
+            <div class="hud-item">
+              <span>Vel B (km/h)</span>
+              <strong id="hudVelB">0.00</strong>
+            </div>
+            <div class="hud-item">
+              <span>Vel resultante (km/h)</span>
+              <strong id="hudVelF">0.00</strong>
+            </div>
+            <div class="hud-item">
+              <span>Angulo (deg)</span>
+              <strong id="hudAngle">0.0</strong>
+            </div>
+          </div>
+          <div class="hud-phase">
+            Fase: <strong id="hudPhase">En espera</strong>
+          </div>
+          <div class="hud-hash">
+            Hash dictamen: <strong id="hudHash">N/D</strong>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Simulador Forense 3D</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <aside class="panel">
+        <div class="panel-header">
+          <h1>Simulador Forense 3D</h1>
+          <p>Reconstruccion basica de accidentes viales</p>
+        </div>
+
+        <div class="panel-section">
+          <label for="scenario">Escenario</label>
+          <select id="scenario">
+            <option value="perpendicular">Choque perpendicular</option>
+            <option value="frontal">Frontal</option>
+            <option value="muro">Muro</option>
+            <option value="atropello">Atropello</option>
+          </select>
+        </div>
+
+        <div class="panel-section">
+          <label for="friction">Friccion (mu)</label>
+          <select id="friction">
+            <option value="0.75">Asfalto seco (0.75)</option>
+            <option value="0.45">Asfalto mojado (0.45)</option>
+          </select>
+        </div>
+
+        <div class="panel-section">
+          <label for="slopeDeg">Inclinacion de calle (grados)</label>
+          <input
+            id="slopeDeg"
+            type="number"
+            min="-15"
+            max="15"
+            step="0.5"
+            value="0"
+          />
+        </div>
+
+        <div class="panel-section">
+          <label for="restitution">Coeficiente de restitucion (e)</label>
+          <input
+            id="restitution"
+            type="number"
+            min="0"
+            max="1"
+            step="0.05"
+            value="0"
+          />
+        </div>
+
+        <div class="panel-grid">
+          <div class="panel-field">
+            <label for="massA">Masa Vehiculo A (kg)</label>
+            <input id="massA" type="number" min="100" step="10" value="1300" />
+          </div>
+          <div class="panel-field">
+            <label for="speedA">Velocidad A (km/h)</label>
+            <input id="speedA" type="number" min="0" step="1" value="0" />
+          </div>
+          <div class="panel-field">
+            <label for="skidA">Huella frenado A (m)</label>
+            <input id="skidA" type="number" min="0" step="0.5" value="18" />
+          </div>
+          <div class="panel-field">
+            <label for="distanceA">Distancia inicial A (m)</label>
+            <input id="distanceA" type="number" min="0" step="1" value="14" />
+          </div>
+          <div class="panel-field">
+            <label for="massB">Masa Vehiculo B (kg)</label>
+            <input id="massB" type="number" min="50" step="10" value="1100" />
+          </div>
+          <div class="panel-field">
+            <label for="speedB">Velocidad B (km/h)</label>
+            <input id="speedB" type="number" min="0" step="1" value="50" />
+          </div>
+          <div class="panel-field">
+            <label for="distanceB">Distancia inicial B (m)</label>
+            <input id="distanceB" type="number" min="0" step="1" value="10" />
+          </div>
+        </div>
+
+        <label class="checkbox">
+          <input id="noBrake" type="checkbox" />
+          <span>No freno (velocidad constante)</span>
+        </label>
+
+        <div class="panel-section">
+          <label for="speedFactor">Velocidad simulacion (x)</label>
+          <div class="range-row">
+            <input
+              id="speedFactor"
+              type="range"
+              min="0.25"
+              max="3"
+              step="0.25"
+              value="1"
+            />
+            <span id="speedValue" class="range-value">1.00x</span>
+          </div>
+        </div>
+
+        <div class="panel-actions">
+          <button id="processBtn" class="primary">PROCESAR VECTORES 3D</button>
+          <button id="resetBtn">RESETEAR ESCENA</button>
+          <button id="pauseBtn">PAUSAR SIMULACION</button>
+          <button id="exportBtn" class="ghost">EXPORTAR DICTAMEN</button>
+        </div>
+
+        <div class="panel-foot">
+          <div class="legend">
+            <span class="dot blue"></span>
+            <span>Vector A</span>
+            <span class="dot red"></span>
+            <span>Vector B</span>
+            <span class="dot white"></span>
+            <span>Vector resultante</span>
+          </div>
+        </div>
+      </aside>
+
+      <main class="viewport">
+        <canvas id="scene"></canvas>
+        <div class="hud">
+          <div class="hud-title">HUD Forense</div>
+          <div class="hud-grid">
+            <div class="hud-item">
+              <span>Vel A (km/h)</span>
+              <strong id="hudVelA">0.00</strong>
+            </div>
+            <div class="hud-item">
+              <span>Vel B (km/h)</span>
+              <strong id="hudVelB">0.00</strong>
+            </div>
+            <div class="hud-item">
+              <span>Vel resultante (km/h)</span>
+              <strong id="hudVelF">0.00</strong>
+            </div>
+            <div class="hud-item">
+              <span>Angulo (deg)</span>
+              <strong id="hudAngle">0.0</strong>
+            </div>
+          </div>
+          <div class="hud-phase">
+            Fase: <strong id="hudPhase">En espera</strong>
+          </div>
+          <div class="hud-hash">
+            Hash dictamen: <strong id="hudHash">N/D</strong>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

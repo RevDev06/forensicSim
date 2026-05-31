@@ -1,0 +1,11 @@
+DICTAMEN FORENSE - SIMULADOR 3D
+Fecha: 2026-05-31
+
+Escenario: Frontal
+Friccion (mu): 0.75
+Masa Vehiculo A: 1300 kg
+Masa Vehiculo B: 1100 kg
+Velocidad inicial A: 16.27 m/s
+Velocidad inicial B: 14.00 m/s
+Velocidad final resultante: 0.00 m/s
+Angulo impacto: 180.0 deg

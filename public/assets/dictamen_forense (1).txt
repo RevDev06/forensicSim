@@ -1,0 +1,13 @@
+DICTAMEN FORENSE - SIMULADOR 3D
+Fecha: 2026-05-31
+
+Escenario: Choque perpendicular
+Friccion (mu): 0.75
+Masa Vehiculo A: 1300 kg
+Masa Vehiculo B: 1100 kg
+Distancia inicial A: 14.00 m
+Distancia inicial B: 10.00 m
+Velocidad inicial A: 60.00 km/h
+Velocidad inicial B: 50.00 km/h
+Velocidad final resultante: 0.00 km/h
+Angulo impacto: 35.2 deg
