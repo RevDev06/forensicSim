@@ -10,6 +10,7 @@ const viewport = document.querySelector(".viewport");
 
 const ui = {
   scenario: document.getElementById("scenario"),
+  reconMode: document.getElementById("reconMode"),
   friction: document.getElementById("friction"),
   slopeDeg: document.getElementById("slopeDeg"),
   restitution: document.getElementById("restitution"),
@@ -19,7 +20,10 @@ const ui = {
   distanceA: document.getElementById("distanceA"),
   massB: document.getElementById("massB"),
   speedB: document.getElementById("speedB"),
+  skidB: document.getElementById("skidB"),
   distanceB: document.getElementById("distanceB"),
+  postImpactDistance: document.getElementById("postImpactDistance"),
+  postImpactAngle: document.getElementById("postImpactAngle"),
   noBrake: document.getElementById("noBrake"),
   pauseBtn: document.getElementById("pauseBtn"),
   speedFactor: document.getElementById("speedFactor"),
@@ -253,9 +257,312 @@ const setSpeedLabel = (value) => {
 };
 
 const updateSpeedFromUi = () => {
+  if (!ui.speedFactor) {
+    simulationSpeed = 1;
+    setSpeedLabel(simulationSpeed);
+    return;
+  }
   const value = readNumber(ui.speedFactor, 1);
   simulationSpeed = Math.min(Math.max(value, 0.25), 3);
   setSpeedLabel(simulationSpeed);
+};
+
+const updateReconModeUi = () => {
+  if (!ui.reconMode) {
+    return;
+  }
+  const isInverse = ui.reconMode.value === "inverse";
+  document.querySelectorAll("[data-mode='inverse']").forEach((element) => {
+    element.style.display = isInverse ? "" : "none";
+  });
+  document.querySelectorAll("[data-mode='direct']").forEach((element) => {
+    element.style.display = isInverse ? "none" : "";
+  });
+};
+
+const normalizeDir2D = (dir) => {
+  const length = Math.hypot(dir.x, dir.z);
+  if (length <= 0.0001) {
+    return { x: 0, z: 0 };
+  }
+  return { x: dir.x / length, z: dir.z / length };
+};
+
+const setInputValue = (element, value) => {
+  if (!element) {
+    return;
+  }
+  if (element.type === "checkbox") {
+    element.checked = Boolean(value);
+  } else {
+    element.value = value;
+  }
+};
+
+const DEMO_PRESETS = {
+  "direct-perpendicular": {
+    reconMode: "direct",
+    scenario: "perpendicular",
+    mu: "0.75",
+    slopeDeg: 0,
+    restitution: 0,
+    massA: 1300,
+    massB: 1100,
+    speedA: 60,
+    speedB: 30,
+    skidA: 10,
+    skidB: 8,
+    distanceA: 14,
+    distanceB: 10,
+    noBrake: false,
+    postImpactDistance: 8,
+    postImpactAngle: 45,
+    speedFactor: 1,
+  },
+  "direct-frontal": {
+    reconMode: "direct",
+    scenario: "frontal",
+    mu: "0.75",
+    slopeDeg: 0,
+    restitution: 0,
+    massA: 1300,
+    massB: 1300,
+    speedA: 50,
+    speedB: 50,
+    skidA: 10,
+    skidB: 10,
+    distanceA: 14,
+    distanceB: 14,
+    noBrake: false,
+    postImpactDistance: 6,
+    postImpactAngle: 0,
+    speedFactor: 1,
+  },
+  "direct-muro": {
+    reconMode: "direct",
+    scenario: "muro",
+    mu: "0.75",
+    slopeDeg: 0,
+    restitution: 0,
+    massA: 1300,
+    massB: 2000,
+    speedA: 60,
+    speedB: 0,
+    skidA: 6,
+    skidB: 0,
+    distanceA: 16,
+    distanceB: 10,
+    noBrake: true,
+    postImpactDistance: 5,
+    postImpactAngle: 0,
+    speedFactor: 1,
+  },
+  "direct-atropello": {
+    reconMode: "direct",
+    scenario: "atropello",
+    mu: "0.75",
+    slopeDeg: 0,
+    restitution: 0,
+    massA: 1300,
+    massB: 200,
+    speedA: 60,
+    speedB: 25,
+    skidA: 6,
+    skidB: 4,
+    distanceA: 14,
+    distanceB: 8,
+    noBrake: false,
+    postImpactDistance: 5,
+    postImpactAngle: 25,
+    speedFactor: 1,
+  },
+  "inverse-perpendicular": {
+    reconMode: "inverse",
+    scenario: "perpendicular",
+    mu: "0.75",
+    slopeDeg: 0,
+    restitution: 0,
+    massA: 1300,
+    massB: 1300,
+    speedA: 0,
+    speedB: 0,
+    skidA: 8,
+    skidB: 8,
+    distanceA: 14,
+    distanceB: 10,
+    noBrake: false,
+    postImpactDistance: 8,
+    postImpactAngle: 45,
+    speedFactor: 1,
+  },
+  "inverse-frontal": {
+    reconMode: "inverse",
+    scenario: "frontal",
+    mu: "0.75",
+    slopeDeg: 0,
+    restitution: 0,
+    massA: 1300,
+    massB: 1300,
+    speedA: 0,
+    speedB: 0,
+    skidA: 10,
+    skidB: 10,
+    distanceA: 14,
+    distanceB: 14,
+    noBrake: false,
+    postImpactDistance: 6,
+    postImpactAngle: 0,
+    speedFactor: 1,
+  },
+  "inverse-muro": {
+    reconMode: "inverse",
+    scenario: "muro",
+    mu: "0.75",
+    slopeDeg: 0,
+    restitution: 0,
+    massA: 1300,
+    massB: 2000,
+    speedA: 0,
+    speedB: 0,
+    skidA: 8,
+    skidB: 0,
+    distanceA: 10,
+    distanceB: 0,
+    noBrake: false,
+    postImpactDistance: 6,
+    postImpactAngle: 0,
+    speedFactor: 1,
+  },
+  "inverse-atropello": {
+    reconMode: "inverse",
+    scenario: "atropello",
+    mu: "0.75",
+    slopeDeg: 0,
+    restitution: 0,
+    massA: 1300,
+    massB: 200,
+    speedA: 0,
+    speedB: 0,
+    skidA: 3.5,
+    skidB: 9.5,
+    distanceA: 8,
+    distanceB: 10,
+    noBrake: false,
+    postImpactDistance: 6,
+    postImpactAngle: 25,
+    speedFactor: 1,
+  },
+};
+
+const applyDemoPreset = (preset) => {
+  if (!preset) {
+    return;
+  }
+
+  setInputValue(ui.reconMode, preset.reconMode);
+  updateReconModeUi();
+  setInputValue(ui.scenario, preset.scenario);
+  setInputValue(ui.friction, preset.mu);
+  setInputValue(ui.slopeDeg, preset.slopeDeg);
+  setInputValue(ui.restitution, preset.restitution);
+  setInputValue(ui.massA, preset.massA);
+  setInputValue(ui.massB, preset.massB);
+  setInputValue(ui.speedA, preset.speedA);
+  setInputValue(ui.speedB, preset.speedB);
+  setInputValue(ui.skidA, preset.skidA);
+  setInputValue(ui.skidB, preset.skidB);
+  setInputValue(ui.distanceA, preset.distanceA);
+  setInputValue(ui.distanceB, preset.distanceB);
+  setInputValue(ui.postImpactDistance, preset.postImpactDistance);
+  setInputValue(ui.postImpactAngle, preset.postImpactAngle);
+  setInputValue(ui.noBrake, preset.noBrake);
+  setInputValue(ui.speedFactor, preset.speedFactor);
+  updateSpeedFromUi();
+  startSimulation();
+};
+
+const solveImpactSpeeds = ({
+  dirA,
+  dirB,
+  massA,
+  massB,
+  resultVector,
+  hintSpeedA,
+  hintSpeedB,
+  logger,
+}) => {
+  const uA = normalizeDir2D(dirA);
+  const uB = normalizeDir2D(dirB);
+  const totalMass = massA + massB;
+
+  if (Math.hypot(uB.x, uB.z) <= 0.0001) {
+    const vAlong = resultVector.x * uA.x + resultVector.z * uA.z;
+    const speedA = totalMass > 0 ? (totalMass * vAlong) / massA : 0;
+    return {
+      speedAImpact: Math.max(0, speedA),
+      speedBImpact: 0,
+      solver: "muro",
+    };
+  }
+
+  const det = uA.x * uB.z - uA.z * uB.x;
+  if (Math.abs(det) > 0.0001) {
+    const speedA =
+      (totalMass * (resultVector.x * uB.z - resultVector.z * uB.x)) /
+      (massA * det);
+    const speedB =
+      (totalMass * (resultVector.z * uA.x - resultVector.x * uA.z)) /
+      (massB * det);
+    return {
+      speedAImpact: Math.max(0, speedA),
+      speedBImpact: Math.max(0, speedB),
+      solver: "matrix",
+    };
+  }
+
+  const axis = Math.hypot(uA.x, uA.z) > 0.0001 ? uA : uB;
+  const signB = Math.sign(axis.x * uB.x + axis.z * uB.z) || 1;
+  const vAlong = resultVector.x * axis.x + resultVector.z * axis.z;
+  let speedA = 0;
+  let speedB = 0;
+
+  if (hintSpeedA > 0) {
+    speedA = hintSpeedA;
+    speedB = (totalMass * vAlong - massA * speedA) / (massB * signB || 1);
+  } else if (hintSpeedB > 0) {
+    speedB = hintSpeedB;
+    speedA = (totalMass * vAlong - massB * signB * speedB) / (massA || 1);
+  } else {
+    const denom = massA + massB * signB;
+    if (Math.abs(denom) > 0.0001) {
+      speedA = (totalMass * vAlong) / denom;
+      speedB = speedA;
+    } else {
+      speedA = Math.abs(vAlong);
+      speedB = Math.abs(vAlong);
+      if (logger && typeof logger.log === "function") {
+        logger.log("inverse_warning", {
+          message: "Modo frontal subdeterminado, se asume misma velocidad.",
+        });
+      }
+    }
+  }
+
+  return {
+    speedAImpact: Math.max(0, speedA),
+    speedBImpact: Math.max(0, speedB),
+    solver: "parallel",
+  };
+};
+
+const setPauseState = (paused) => {
+  isPaused = paused;
+  if (ui.pauseBtn) {
+    ui.pauseBtn.textContent = paused
+      ? "REANUDAR SIMULACION"
+      : "PAUSAR SIMULACION";
+  }
+  clock.getDelta();
 };
 
 const KMH_TO_MS = 1 / 3.6;
@@ -311,6 +618,60 @@ const clearMarks = () => {
   }
 };
 
+const resetTrails = () => {
+  trailPointsA.length = 0;
+  trailPointsB.length = 0;
+  lastTrailPointA = null;
+  lastTrailPointB = null;
+  trailGeometryA.setFromPoints([]);
+  trailGeometryB.setFromPoints([]);
+  trailLineA.computeLineDistances();
+  trailLineB.computeLineDistances();
+};
+
+const updateTrailForVehicle = (vehicle, points, lastPoint, line) => {
+  if (!vehicle) {
+    return lastPoint;
+  }
+
+  const point = new THREE.Vector3(vehicle.x, 0.03, vehicle.z);
+  if (
+    !lastPoint ||
+    lastPoint.distanceToSquared(point) >= trailMinDistance * trailMinDistance
+  ) {
+    points.push(point);
+    if (points.length > trailMaxPoints) {
+      points.shift();
+    }
+
+    if (!lastPoint) {
+      lastPoint = point.clone();
+    } else {
+      lastPoint.copy(point);
+    }
+
+    line.geometry.setFromPoints(points);
+    line.computeLineDistances();
+  }
+
+  return lastPoint;
+};
+
+const updateTrails = () => {
+  lastTrailPointA = updateTrailForVehicle(
+    vehicleA,
+    trailPointsA,
+    lastTrailPointA,
+    trailLineA,
+  );
+  lastTrailPointB = updateTrailForVehicle(
+    vehicleB,
+    trailPointsB,
+    lastTrailPointB,
+    trailLineB,
+  );
+};
+
 const resetScene = () => {
   simulationActive = false;
   skidTimer = 0;
@@ -331,6 +692,8 @@ const resetScene = () => {
   }
 
   clearMarks();
+  resetTrails();
+  setPauseState(false);
 
   arrowA.visible = false;
   arrowB.visible = false;
@@ -540,6 +903,7 @@ const startSimulation = async () => {
     ui.scenario.options[ui.scenario.selectedIndex]?.text || scenario;
 
   const rawInputs = {
+    reconMode: ui.reconMode ? ui.reconMode.value : "direct",
     scenario,
     mu: parseFloat(ui.friction.value),
     slopeDeg: readNumber(ui.slopeDeg, 0),
@@ -549,8 +913,11 @@ const startSimulation = async () => {
     speedAInputKmh: Math.max(0, readNumber(ui.speedA, 0)),
     massB: readNumber(ui.massB, 1100),
     speedBInputKmh: Math.max(0, readNumber(ui.speedB, 0)),
+    skidB: readNumber(ui.skidB, 0),
     distanceA: Math.max(0, readNumber(ui.distanceA, 14)),
     distanceB: Math.max(0, readNumber(ui.distanceB, 10)),
+    postImpactDistance: readNumber(ui.postImpactDistance, 0),
+    postImpactAngle: readNumber(ui.postImpactAngle, 0),
     noBrake: ui.noBrake.checked,
   };
 
@@ -566,6 +933,7 @@ const startSimulation = async () => {
     return;
   }
 
+  updateSpeedFromUi();
   applyRoadSlope(inputs.slopeDeg);
   const collisionAxis = inputs.scenario === "frontal" ? { x: 1, z: 0 } : null;
   physics = new PhysicsEngine({
@@ -576,21 +944,89 @@ const startSimulation = async () => {
     collisionAxis,
     logger: dataLogger,
   });
-  const speedAFromSkid = physics.computeSpeedFromSkid(
-    inputs.skidA,
-    inputs.slopeDeg,
-  );
-  const speedA =
-    inputs.speedAInputKmh > 0
-      ? toMetersPerSecond(inputs.speedAInputKmh)
-      : speedAFromSkid;
-  const speedB = toMetersPerSecond(inputs.speedBInputKmh);
+  const distanceAUsed =
+    inputs.reconMode === "inverse" ? inputs.skidA : inputs.distanceA;
+  const distanceBUsed =
+    inputs.reconMode === "inverse" ? inputs.skidB : inputs.distanceB;
 
   const scenarioData = buildScenario(
     inputs.scenario,
-    inputs.distanceA,
-    inputs.distanceB,
+    distanceAUsed,
+    distanceBUsed,
   );
+
+  let speedAFromSkid = 0;
+  let speedBFromSkid = 0;
+  let speedA = 0;
+  let speedB = 0;
+  let inverseMeta = null;
+
+  if (inputs.reconMode === "inverse") {
+    const resultAngleRad = inputs.postImpactAngle * DEG_TO_RAD;
+    const combinedSpeed = physics.computeSpeedFromPostImpactDistance(
+      inputs.postImpactDistance,
+      inputs.slopeDeg,
+    );
+    const resultVector = {
+      x: combinedSpeed * Math.cos(resultAngleRad),
+      z: combinedSpeed * Math.sin(resultAngleRad),
+    };
+
+    const hintSpeedA =
+      inputs.speedAInputKmh > 0 ? toMetersPerSecond(inputs.speedAInputKmh) : 0;
+    const hintSpeedB =
+      inputs.speedBInputKmh > 0 ? toMetersPerSecond(inputs.speedBInputKmh) : 0;
+
+    const impactSolution = solveImpactSpeeds({
+      dirA: scenarioData.dirA,
+      dirB: scenarioData.dirB,
+      massA: inputs.massA,
+      massB: inputs.massB,
+      resultVector,
+      hintSpeedA,
+      hintSpeedB,
+      logger: dataLogger,
+    });
+
+    const speedAImpact = impactSolution.speedAImpact;
+    const speedBImpact = impactSolution.speedBImpact;
+    speedA = physics.computeSpeedBeforeBraking(
+      speedAImpact,
+      inputs.skidA,
+      inputs.slopeDeg,
+    );
+    speedB = physics.computeSpeedBeforeBraking(
+      speedBImpact,
+      inputs.skidB,
+      inputs.slopeDeg,
+    );
+    inverseMeta = {
+      combinedSpeed,
+      resultVector,
+      speedAImpact,
+      speedBImpact,
+      speedAPreBrake: speedA,
+      speedBPreBrake: speedB,
+      solver: impactSolution.solver,
+    };
+  } else {
+    speedAFromSkid = physics.computeSpeedFromSkid(
+      inputs.skidA,
+      inputs.slopeDeg,
+    );
+    speedBFromSkid = physics.computeSpeedFromSkid(
+      inputs.skidB,
+      inputs.slopeDeg,
+    );
+    speedA =
+      inputs.speedAInputKmh > 0
+        ? toMetersPerSecond(inputs.speedAInputKmh)
+        : speedAFromSkid;
+    speedB =
+      inputs.speedBInputKmh > 0
+        ? toMetersPerSecond(inputs.speedBInputKmh)
+        : speedBFromSkid;
+  }
 
   vehicleA = new Vehicle({
     tipo: "Sedan",
@@ -626,18 +1062,28 @@ const startSimulation = async () => {
 
   dataLogger.setInputs({
     ...inputs,
+    distanceAUsed,
+    distanceBUsed,
     scenarioLabel,
     speedAFromSkid,
+    speedBFromSkid,
     speedA,
     speedB,
+    inverseMeta,
   });
 
   currentConfig = {
     ...inputs,
+    distanceA: distanceAUsed,
+    distanceB: distanceBUsed,
+    distanceAUsed,
+    distanceBUsed,
     scenarioLabel,
     speedAFromSkid,
+    speedBFromSkid,
     speedA,
     speedB,
+    inverseMeta,
     hash: "",
     restPosition: null,
   };
@@ -658,6 +1104,11 @@ const exportReport = async () => {
   report.push(`Fecha: ${new Date().toISOString().slice(0, 10)}`);
   report.push("");
   report.push(`Escenario: ${currentConfig.scenarioLabel}`);
+  report.push(
+    `Modo reconstruccion: ${
+      currentConfig.reconMode === "inverse" ? "Inverso" : "Directo"
+    }`,
+  );
   report.push(`Friccion (mu): ${currentConfig.mu}`);
   report.push(
     `Inclinacion de calle: ${formatNumber(currentConfig.slopeDeg, 1)} deg`,
@@ -686,6 +1137,38 @@ const exportReport = async () => {
       toKilometersPerHour(currentConfig.speedB),
     )} km/h`,
   );
+
+  if (currentConfig.reconMode === "inverse") {
+    report.push(
+      `Distancia post-impacto: ${formatNumber(
+        currentConfig.postImpactDistance,
+        2,
+      )} m`,
+    );
+    report.push(
+      `Angulo resultante: ${formatNumber(
+        currentConfig.postImpactAngle,
+        1,
+      )} deg`,
+    );
+    if (currentConfig.inverseMeta) {
+      report.push(
+        `Velocidad post-impacto (conjunto): ${formatNumber(
+          toKilometersPerHour(currentConfig.inverseMeta.combinedSpeed),
+        )} km/h`,
+      );
+      report.push(
+        `Velocidad impacto A: ${formatNumber(
+          toKilometersPerHour(currentConfig.inverseMeta.speedAImpact),
+        )} km/h`,
+      );
+      report.push(
+        `Velocidad impacto B: ${formatNumber(
+          toKilometersPerHour(currentConfig.inverseMeta.speedBImpact),
+        )} km/h`,
+      );
+    }
+  }
 
   if (physics && physics.hasCollided) {
     report.push(
@@ -734,9 +1217,41 @@ ui.resetBtn.addEventListener("click", () => {
   resetScene();
 });
 
+if (ui.pauseBtn) {
+  ui.pauseBtn.addEventListener("click", () => {
+    if (!simulationActive) {
+      return;
+    }
+    setPauseState(!isPaused);
+  });
+}
+
+if (ui.reconMode) {
+  ui.reconMode.addEventListener("change", () => {
+    updateReconModeUi();
+  });
+}
+
+document.querySelectorAll("[data-demo]").forEach((button) => {
+  button.addEventListener("click", () => {
+    const key = button.getAttribute("data-demo");
+    applyDemoPreset(DEMO_PRESETS[key]);
+  });
+});
+
+if (ui.speedFactor) {
+  ui.speedFactor.addEventListener("input", () => {
+    updateSpeedFromUi();
+  });
+}
+
 ui.exportBtn.addEventListener("click", () => {
   exportReport();
 });
+
+updateSpeedFromUi();
+updateReconModeUi();
+setPauseState(false);
 
 const resizeRenderer = () => {
   const width = viewport.clientWidth;
@@ -751,9 +1266,10 @@ resizeObserver.observe(viewport);
 resizeRenderer();
 
 const animate = () => {
-  const dt = Math.min(clock.getDelta(), 0.05);
+  const rawDt = Math.min(clock.getDelta(), 0.05);
 
-  if (simulationActive && vehicleA && vehicleB && physics) {
+  if (simulationActive && vehicleA && vehicleB && physics && !isPaused) {
+    const dt = rawDt * simulationSpeed;
     physics.update(dt, vehicleA, vehicleB);
 
     if (physics.hasCollided && !impactCaptured) {
@@ -769,6 +1285,7 @@ const animate = () => {
     vehicleA.update(dt);
     vehicleB.update(dt);
 
+    updateTrails();
     updateArrows();
     updateHud();
 

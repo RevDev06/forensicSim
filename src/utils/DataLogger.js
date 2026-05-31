@@ -21,8 +21,13 @@ export class DataLogger {
       "muro",
       "atropello",
     ]);
+    const reconMode = this._requireOneOf("Modo reconstruccion", raw.reconMode, [
+      "direct",
+      "inverse",
+    ]);
 
     const sanitized = {
+      reconMode,
       scenario,
       mu: this._requireRange("Friccion (mu)", raw.mu, 0.1, 1.2),
       slopeDeg: this._requireRange(
@@ -52,6 +57,7 @@ export class DataLogger {
         300,
       ),
       skidA: this._requireRange("Huella frenado A", raw.skidA, 0, 200),
+      skidB: this._requireRange("Huella frenado B", raw.skidB, 0, 200),
       distanceA: this._requireRange(
         "Distancia inicial A",
         raw.distanceA,
@@ -63,6 +69,18 @@ export class DataLogger {
         raw.distanceB,
         0,
         200,
+      ),
+      postImpactDistance: this._requireRange(
+        "Distancia post-impacto",
+        raw.postImpactDistance,
+        0,
+        200,
+      ),
+      postImpactAngle: this._requireRange(
+        "Angulo post-impacto",
+        raw.postImpactAngle,
+        -180,
+        180,
       ),
       noBrake: Boolean(raw.noBrake),
     };

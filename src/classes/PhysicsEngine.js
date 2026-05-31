@@ -75,6 +75,53 @@ export class PhysicsEngine {
     return speed;
   }
 
+  computeSpeedFromPostImpactDistance(distance, slopeDeg = this.slopeDeg) {
+    if (!Number.isFinite(distance) || distance <= 0) {
+      return 0;
+    }
+
+    const effectiveMu = this._effectiveMu(slopeDeg);
+    if (effectiveMu <= 0) {
+      return 0;
+    }
+
+    const speed = Math.sqrt(2 * this.g * distance * effectiveMu);
+    this._log("post_impact_speed", {
+      distance,
+      mu: this.mu,
+      slopeDeg,
+      effectiveMu,
+      speed,
+    });
+    return speed;
+  }
+
+  computeSpeedBeforeBraking(impactSpeed, distance, slopeDeg = this.slopeDeg) {
+    const baseSpeed = Number.isFinite(impactSpeed)
+      ? Math.max(impactSpeed, 0)
+      : 0;
+    if (!Number.isFinite(distance) || distance <= 0) {
+      return baseSpeed;
+    }
+
+    const effectiveMu = this._effectiveMu(slopeDeg);
+    if (effectiveMu <= 0) {
+      return baseSpeed;
+    }
+
+    const delta = 2 * this.g * distance * effectiveMu;
+    const speed = Math.sqrt(baseSpeed * baseSpeed + delta);
+    this._log("pre_brake_speed", {
+      impactSpeed: baseSpeed,
+      distance,
+      mu: this.mu,
+      slopeDeg,
+      effectiveMu,
+      speed,
+    });
+    return speed;
+  }
+
   initialize(vehicleA, vehicleB) {
     this.reset();
     this.phase = 1;
@@ -304,17 +351,12 @@ export class PhysicsEngine {
   }
 
   _effectiveMu(slopeDeg) {
-    const slopeFactor = this._slopeFactor(slopeDeg);
-    return Math.max(0, this.mu + slopeFactor);
-  }
-
-  _slopeFactor(slopeDeg) {
-    if (!Number.isFinite(slopeDeg) || slopeDeg === 0) {
-      return 0;
+    if (!Number.isFinite(slopeDeg)) {
+      return Math.max(0, this.mu);
     }
-    const radians = Math.abs(slopeDeg) * (Math.PI / 180);
-    const slope = Math.tan(radians);
-    return slopeDeg >= 0 ? -slope : slope;
+    const radians = slopeDeg * (Math.PI / 180);
+    const effectiveMu = this.mu * Math.cos(radians) - Math.sin(radians);
+    return Math.max(0, effectiveMu);
   }
 
   _angleFromVector(x, z) {
